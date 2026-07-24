@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大疆4G模块改上网卡 - 一键工具</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, 'Microsoft YaHei', sans-serif; background:#0f0f0f; color:#e0e0e0; line-height:1.8; }
+  .container { max-width:800px; margin:0 auto; padding:40px 20px; }
+  h1 { font-size:2em; color:#00d4aa; text-align:center; margin-bottom:10px; }
+  .subtitle { text-align:center; color:#888; margin-bottom:40px; }
+  .card { background:#1a1a1a; border-radius:12px; padding:30px; margin-bottom:24px; border:1px solid #2a2a2a; }
+  h2 { color:#00d4aa; font-size:1.3em; margin-bottom:16px; }
+  h3 { color:#ccc; font-size:1.1em; margin:20px 0 12px; }
+  .step { background:#252525; border-radius:8px; padding:20px; margin:12px 0; border-left:3px solid #00d4aa; }
+  .step-num { color:#00d4aa; font-weight:bold; font-size:1.2em; }
+  .download-btn { display:block; background:#00d4aa; color:#000; text-align:center; padding:16px 32px; border-radius:8px; font-size:1.2em; font-weight:bold; text-decoration:none; margin:20px 0; transition:.2s; cursor:pointer; border:none; width:100%; }
+  .download-btn:hover { background:#00eebb; transform:translateY(-1px); }
+  .download-btn.small { padding:10px 20px; font-size:1em; display:inline-block; width:auto; }
+  code { background:#333; padding:2px 8px; border-radius:4px; font-family:'Consolas','Courier New',monospace; font-size:0.9em; color:#ffd580; }
+  pre { background:#111; padding:16px; border-radius:8px; overflow-x:auto; margin:10px 0; border:1px solid #2a2a2a; }
+  pre code { background:none; padding:0; color:#a0d0a0; }
+  .note { background:#2a2a00; border-left:3px solid #ffd580; padding:12px 16px; border-radius:0 8px 8px 0; margin:12px 0; font-size:0.95em; }
+  .check { color:#00d4aa; }
+  .warn { color:#ff6b6b; }
+  ul, ol { padding-left:24px; }
+  li { margin:6px 0; }
+  table { width:100%; border-collapse:collapse; margin:12px 0; }
+  td, th { padding:10px 14px; border:1px solid #2a2a2a; text-align:left; }
+  th { background:#252525; color:#00d4aa; }
+  .diagram { background:#111; padding:20px; border-radius:8px; text-align:center; font-family:monospace; margin:12px 0; line-height:2.2; border:1px dashed #333; }
+  hr { border:none; border-top:1px solid #2a2a2a; margin:30px 0; }
+  #copyMsg { display:none; background:#00d4aa; color:#000; padding:8px 16px; border-radius:6px; position:fixed; bottom:30px; right:30px; font-weight:bold; }
+  .what-you-need { display:flex; gap:16px; flex-wrap:wrap; }
+  .need-item { flex:1; min-width:120px; background:#252525; border-radius:8px; padding:16px; text-align:center; }
+  .need-item .icon { font-size:2em; margin-bottom:8px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>📡 大疆1代4G模块 → 上网卡</h1>
+  <p class="subtitle">纯软件方案 · 零硬件购买 · 3分钟搞定 · iPad/电脑都能用</p>
+
+  <!-- 你需要什么 -->
+  <div class="card">
+    <h2>🎒 你需要准备</h2>
+    <div class="what-you-need">
+      <div class="need-item"><div class="icon">💻</div>Windows 电脑<br>（Win10/11）</div>
+      <div class="need-item"><div class="icon">📡</div>大疆1代4G模块<br>（~50元）</div>
+      <div class="need-item"><div class="icon">🔌</div>USB-C 数据线<br>（能传数据的）</div>
+      <div class="need-item"><div class="icon">📱</div>iPad/电脑<br>（USB-C口）</div>
+    </div>
+    <div class="note" style="margin-top:16px;">⚠️ 充电线可能不行，用能连手机传文件的数据线</div>
+  </div>
+
+  <!-- 原理 -->
+  <div class="card">
+    <h2>🧠 这是什么原理</h2>
+    <div class="diagram">
+    ┌─────────────┐      ┌──────────────┐      ┌─────────────┐<br>
+    │ 大疆模块     │ ──→ │ 改身份证       │ ──→ │ 移远 EC25   │<br>
+    │ 2CA3:4006   │      │ AT指令永久改写  │      │ 2C7C:0125   │<br>
+    │ 大疆私有协议  │      │ + 切 ECM 模式  │      │ iPad 认成网卡 │<br>
+    └─────────────┘      └──────────────┘      └─────────────┘
+    </div>
+    <p>模块本质是<b>移远 Quectel EG25-G</b>芯片。大疆给它写了私有 USB 身份证，所以只有大疆设备认。我们发 AT 指令把身份证改成<b>公开的移远 EC25</b>，再切到 <b>ECM 模式</b>（iOS 原生支持的 USB 以太网协议），iPad 就能当有线网卡用了。</p>
+  </div>
+
+  <!-- 一键脚本 -->
+  <div class="card" style="border:2px solid #00d4aa;">
+    <h2>🚀 一键脚本（推荐）</h2>
+    <p>下载下面的脚本，<b>右键 → 以管理员身份运行</b>，自动完成全部操作。</p>
+    <button class="download-btn" onclick="downloadScript('dji-to-ec25.bat')">
+      ⬇ 下载一键配置脚本
+    </button>
+    <p style="color:#888;text-align:center;font-size:0.9em;">3MB · 自动装 WSL2 + usbipd + 改模块</p>
+
+    <button class="download-btn small" onclick="downloadScript('ec25-to-dji.bat')" style="margin-right:12px;">
+      ⬇ 恢复大疆身份
+    </button>
+    <span style="color:#888;font-size:0.9em;">如果想改回大疆原始状态用这个</span>
+  </div>
+
+  <!-- 手动步骤 -->
+  <div class="card">
+    <h2>📖 手动操作步骤（如果脚本报错）</h2>
+
+    <div class="step">
+      <p><span class="step-num">①</span> <b>装 WSL2（Windows Linux 子系统）</b></p>
+      <p>管理员 PowerShell 里：</p>
+      <pre><code>wsl --install -d Ubuntu</code></pre>
+      <div class="note">需要重启电脑。装不了的话先跑：<br><code>dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart</code><br><code>dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart</code></div>
+    </div>
+
+    <div class="step">
+      <p><span class="step-num">②</span> <b>装 usbipd-win（USB 透传工具）</b></p>
+      <p>管理员 PowerShell 里一条命令：</p>
+      <pre><code>winget install dorssel.usbipd-win</code></pre>
+      <div class="note">装完重启电脑。如果 winget 用不了，去 <a href="https://github.com/dorssel/usbipd-win/releases" style="color:#00d4aa;">GitHub</a> 下载 .msi 手动装。</div>
+    </div>
+
+    <div class="step">
+      <p><span class="step-num">③</span> <b>更新 WSL 内核（如果 wsl --update 卡住）</b></p>
+      <p>下载最新 WSL 安装包（约 246MB）：</p>
+      <pre><code>curl.exe -L -o wsl-latest.msi "https://github.com/microsoft/WSL/releases/download/2.7.10/wsl.2.7.10.0.x64.msi"</code></pre>
+      <p>双击安装，然后：<code>wsl --shutdown</code></p>
+      <div class="note">内核版本需要 ≥ 5.15 才能 USB 透传。命令 <code>wsl -d Ubuntu -- uname -r</code> 可以看版本。</div>
+    </div>
+
+    <div class="step">
+      <p><span class="step-num">④</span> <b>模块插上，透传进 WSL</b></p>
+      <p>先开一个普通 PowerShell 输入 <code>wsl</code> 保持运行。</p>
+      <p>管理员 PowerShell：</p>
+      <pre><code>usbipd list                              ← 找到 2CA3:4006 的 BUSID
+usbipd bind --busid x-x --force
+usbipd attach --wsl --busid x-x</code></pre>
+      <p>回到 WSL 窗口验证：<code>lsusb</code> 应看到 <code>2ca3:4006</code></p>
+    </div>
+
+    <div class="step">
+      <p><span class="step-num">⑤</span> <b>发 AT 指令改身份</b></p>
+      <p>WSL 里：</p>
+      <pre><code>apt-get install -y socat
+modprobe option
+echo 2ca3 4006 | tee /sys/bus/usb-serial/drivers/option1/new_id
+echo 'AT+QCFG="usbcfg",0x2C7C,0x0125,1,1,1,1,1,0,1' > /dev/ttyUSB2
+echo 'AT+CFUN=1,1' > /dev/ttyUSB2</code></pre>
+      <div class="note">最后那个 <code>1</code> 就是 ECM 模式。模块重启后会断开 USB 连接（正常），重新 <code>bind + attach</code> 就行。</div>
+    </div>
+
+    <div class="step">
+      <p><span class="step-num">⑥</span> <b>验证 + 完工</b></p>
+      <p><code>lsusb</code> 看到 <code>2c7c:0125 Quectel EC25</code> → 成功！</p>
+      <p>拔下模块，插到 iPad USB-C → 设置里出现<b>「以太网」</b>→ IP 地址自动获取 → 上网 ✅</p>
+    </div>
+  </div>
+
+  <!-- 常见问题 -->
+  <div class="card">
+    <h2>❓ 常见问题</h2>
+    <table>
+      <tr><th>问题</th><th>解决</th></tr>
+      <tr><td>iPad 看到以太网但没 IP</td><td>模块没插 SIM 卡 / APN 没配 / SIM 没流量</td></tr>
+      <tr><td>wsl --update 卡在 0%</td><td>用步骤③的直链下载 .msi 手动装</td></tr>
+      <tr><td>usbipd attach 报错 device busy</td><td>加 <code>--force</code> 参数 bind</td></tr>
+      <tr><td>ls /dev/ttyUSB* 没有东西</td><td>先 <code>modprobe option</code> 再 <code>echo ... | tee /sys/.../new_id</code></td></tr>
+      <tr><td>AT 指令没响应</td><td>换端口试试，ttyUSB2/ttyUSB3 都试一下</td></tr>
+      <tr><td>模块发热</td><td>正常的，4G 模块都发热，不用就拔</td></tr>
+      <tr><td>以后想恢复大疆身份</td><td>下载「恢复大疆身份」脚本，或发<br><code>AT+QCFG="usbcfg",0x2CA3,0x4006,1,1,1,1,1,0,0</code></td></tr>
+    </table>
+  </div>
+
+  <hr>
+
+  <p style="text-align:center;color:#666;font-size:0.85em;">
+    原理参考 <a href="https://github.com/wlzh/dji-4g-vohive-mac" style="color:#00d4aa;">wlzh/dji-4g-vohive-mac</a>
+    · 基于 ECB 25 + ECM 模式 · iOS 原生 CDC ECM 驱动
+  </p>
+</div>
+
+<div id="copyMsg">脚本已生成，请保存！</div>
+
+<script>
+// 内嵌脚本内容
+const SCRIPTS = {
+  'dji-to-ec25.bat': String.raw`@echo off
+chcp 65001 >nul
+title 大疆4G模块 → EC25 一键配置
+echo ========================================
+echo  大疆1代4G模块 → 改EC25 + ECM 一键脚本
+echo ========================================
+echo.
+
+net session >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [提示] 需要管理员权限，正在请求...
+    powershell -Command "Start-Process '%~f0' -Verb RunAs"
+    exit /b
+)
+
+echo [1/4] 检查环境...
+wsl --list --quiet >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [错误] WSL 未安装。请先管理员 PowerShell 运行:
+    echo        wsl --install -d Ubuntu
+    echo    （装完重启再来）
+    pause
+    exit /b 1
+)
+echo        WSL 就绪
+
+where usbipd >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [错误] usbipd-win 未安装。管理员 PowerShell 运行:
+    echo        winget install dorssel.usbipd-win
+    pause
+    exit /b 1
+)
+echo        usbipd-win 就绪
+
+echo [2/4] 查找大疆模块 (2CA3:4006)...
+for /f "tokens=1,2" %%a in ('usbipd list 2^>nul ^| findstr /i "2ca3:4006"') do set BUSID=%%a
+if "%BUSID%"=="" (
+    echo [错误] 未找到大疆模块！请确认:
+    echo         1. 模块已插入电脑
+    echo         2. 数据线支持数据传输
+    pause
+    exit /b 1
+)
+echo        找到模块: BUSID=%BUSID%
+
+echo [3/4] 透传模块到 WSL...
+start /B wsl -- bash -c "while true; do sleep 60; done" >nul 2>&1
+timeout /t 3 /nobreak >nul
+usbipd bind --busid %BUSID% --force >nul 2>&1
+usbipd attach --wsl --busid %BUSID% >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [提示] 透传失败，可能是内核太旧。请更新WSL后重试。
+    pause
+    exit /b 1
+)
+echo        透传完成
+
+echo [4/4] 发送 AT 指令...
+wsl -- bash -c "apt-get install -y socat 2>/dev/null; modprobe option 2>/dev/null; echo 2ca3 4006 > /sys/bus/usb-serial/drivers/option1/new_id 2>/dev/null; sleep 1; echo 'AT+QCFG=\"usbcfg\",0x2C7C,0x0125,1,1,1,1,1,0,1' > /dev/ttyUSB2; sleep 2; echo 'AT+CFUN=1,1' > /dev/ttyUSB2; sleep 8; echo ''"
+echo        AT 指令已发送
+echo        模块已改为: Quectel EC25 (2C7C:0125) + ECM 模式
+
+echo.
+echo ========================================
+echo  完成！
+echo.
+echo  拔下模块 → 插 iPad USB-C
+echo  设置里出现「以太网」 → 插 SIM 卡即可上网
+echo ========================================
+pause
+`,
+
+  'ec25-to-dji.bat': String.raw`@echo off
+chcp 65001 >nul
+title 恢复大疆4G模块原始身份
+echo ========================================
+echo  恢复大疆4G模块原始身份
+echo ========================================
+echo.
+
+net session >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [提示] 需要管理员权限...
+    powershell -Command "Start-Process '%~f0' -Verb RunAs"
+    exit /b
+)
+
+echo [1/3] 查找 EC25 模块 (2C7C:0125)...
+for /f "tokens=1,2" %%a in ('usbipd list 2^>nul ^| findstr /i "2c7c:0125"') do set BUSID=%%a
+if "%BUSID%"=="" (
+    echo [错误] 未找到 EC25 模块
+    pause
+    exit /b 1
+)
+echo        找到: BUSID=%BUSID%
+
+echo [2/3] 透传并恢复...
+start /B wsl -- bash -c "while true; do sleep 60; done" >nul 2>&1
+timeout /t 3 /nobreak >nul
+usbipd bind --busid %BUSID% --force >nul 2>&1
+usbipd attach --wsl --busid %BUSID% >nul 2>&1
+wsl -- bash -c "modprobe option 2>/dev/null; echo 2c7c 0125 > /sys/bus/usb-serial/drivers/option1/new_id 2>/dev/null; sleep 1; echo 'AT+QCFG=\"usbcfg\",0x2CA3,0x4006,1,1,1,1,1,0,0' > /dev/ttyUSB2; sleep 2; echo 'AT+CFUN=1,1' > /dev/ttyUSB2; sleep 8; echo ''"
+echo        恢复完成
+
+echo [3/3] 完成！
+echo        模块已恢复为大疆原始身份 2CA3:4006
+pause
+`
+};
+
+function downloadScript(name) {
+  const content = SCRIPTS[name];
+  if (!content) return;
+  const blob = new Blob([content], {type: 'application/bat'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  const msg = document.getElementById('copyMsg');
+  msg.style.display = 'block';
+  setTimeout(() => msg.style.display = 'none', 2000);
+}
+</script>
+
+</body>
+</html>
